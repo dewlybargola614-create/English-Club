@@ -66,7 +66,9 @@ button{cursor:pointer}
 .homecard{background:var(--card);border-radius:22px;box-shadow:var(--shadow);margin-top:-40px;padding:22px 18px 26px;position:relative}
 .homecard h2{margin:0 0 4px;font-size:1.15rem}
 .numgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:14px;margin-top:16px}
-.numbtn{aspect-ratio:1;border-radius:22px;border:0;font-size:2.1rem;font-weight:900;color:#fff;display:grid;place-items:center;box-shadow:0 3px 0 rgba(0,0,0,.15)}
+.numbtn{aspect-ratio:1;border-radius:22px;border:0;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-shadow:0 3px 0 rgba(0,0,0,.15);padding:6px}
+.numbtn .nnum{font-size:2.1rem;font-weight:900;line-height:1}
+.numbtn .nname{font-size:.95rem;font-weight:700;opacity:.95;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .numbtn:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.15)}
 .c0{background:#2d5ca6}.c1{background:#e0802a}.c2{background:#178a6a}.c3{background:#b5487d}.c4{background:#6a55c2}.c5{background:#c79a12}.c6{background:#1f8bb3}
 .homelinks{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px;padding-top:18px;border-top:1px dashed var(--line)}
@@ -187,65 +189,70 @@ textarea.paste{width:100%;min-height:150px;border:1.5px solid var(--line);border
 //    Leave it empty ('') to use TEST MODE (no codes, progress saves only on this device).
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxAICxSVv7EMtKRO_p9XoAdqE60pc-4MfZIo5FpSvwad03lwBMmZnXWmFrUZ8By2R86/exec';
 
-// 2) Number of students (icons on the homepage).
-const NUM_STUDENTS = 14;
+// 2) The students: [class number, name]. These are the icons on the homepage.
+//    The numbers must match column A of the "Students" sheet.
+const STUDENTS = [
+  [1,'Tammy'], [3,'Sherry'], [4,'Yuri'], [5,'Phoebe'], [7,'Angel'], [9,'Abbie'], [10,'Nora'],
+  [11,'Judy'], [14,'Tim'], [16,'Jerry'], [22,'Trillion'], [24,'Sean'], [25,'Eric'], [27,'Angelina'],
+];
 
 // 3) The script. "who" = the speaker numbers for that line.
+//    The numbers are the students' CLASS numbers from the list above (e.g. 10 = Nora).
 //    'ALL' = everyone. 'EACH' = every student says their own version.
 //    To change a speaker, just change the number(s) in who: [ ... ].
 const SCENES = [
   { id:'1A', title:'Welcome at the school gate', zh:'在校門口歡迎', lines:[
     { who:[1], text:"Hello, everyone! We are student ambassadors.", zh:"大家好！我們是學生大使。" },
-    { who:[2], text:"We are from Guanmiao Junior High School in Tainan, Taiwan.", zh:"我們來自台灣台南的關廟國中。" },
-    { who:[3], text:"Today, we will show you our school.", zh:"今天，我們要帶大家看看我們的學校。" },
+    { who:[3], text:"We are from Guanmiao Junior High School in Tainan, Taiwan.", zh:"我們來自台灣台南的關廟國中。" },
+    { who:[4], text:"Today, we will show you our school.", zh:"今天，我們要帶大家看看我們的學校。" },
     { who:'ALL', text:"Welcome to Guanmiao Junior High School!", zh:"歡迎來到關廟國中！" },
   ]},
   { id:'1B', title:'Our town', zh:'我們的小鎮', lines:[
     { who:[1], text:"Our town, Guanmiao, is famous for three things.", zh:"我們的小鎮關廟，有三樣東西很有名。" },
-    { who:[13], text:"Pineapples!", zh:"鳳梨！" },
-    { who:[12], text:"Bamboo shoots!", zh:"竹筍！" },
-    { who:[14], text:"Noodles!", zh:"關廟麵！" },
-    { who:[2], text:"Now, come and see our school!", zh:"現在，來看看我們的學校吧！" },
+    { who:[25], text:"Pineapples!", zh:"鳳梨！" },
+    { who:[24], text:"Bamboo shoots!", zh:"竹筍！" },
+    { who:[27], text:"Noodles!", zh:"關廟麵！" },
+    { who:[3], text:"Now, come and see our school!", zh:"現在，來看看我們的學校吧！" },
   ]},
   { id:'2', title:'Introductions', zh:'自我介紹', lines:[
     { who:'EACH', label:'Each student', text:"Hello! My name is {name}. I'm in Grade {grade}. I'm in Class {cls}.", zh:"哈囉！我的名字是 ____。我讀 ____ 年級。我在 ____ 班。" },
-    // Put the 3–5 speaker numbers here when you decide, e.g. who:[3,6,9]
+    // Put the 3–5 speaker numbers here when you decide, e.g. who:[4,9,14]
     { who:[], label:'One group (3 to 5)', text:"We go to Guanmiao Junior High School.", zh:"我們就讀關廟國中。" },
   ]},
   { id:'3', title:'Our vision', zh:'我們的願景', lines:[
     { who:'ALL', text:"Our school's vision is: Help every child succeed.", zh:"我們學校的願景是：幫助每個孩子成功。" },
   ]},
   { id:'4', title:'How our school helps us', zh:'學校怎麼幫助我們', lines:[
-    { who:[13,4,5], label:'Group 1', text:"Our school helps us learn new things.", zh:"我們的學校幫助我們學習新事物。" },
-    { who:[14,6,7], label:'Group 2', text:"Our school helps us make friends.", zh:"我們的學校幫助我們交朋友。" },
-    { who:[8,9,3], label:'Group 3', text:"Our school helps us improve our English.", zh:"我們的學校幫助我們讓英文進步。" },
-    { who:[10,11,12], label:'Group 4', text:"Our school helps us discover our interests.", zh:"我們的學校幫助我們發掘自己的興趣。" },
+    { who:[25,10,7], label:'Group 1', text:"Our school helps us learn new things.", zh:"我們的學校幫助我們學習新事物。" },
+    { who:[27,9,5], label:'Group 2', text:"Our school helps us make friends.", zh:"我們的學校幫助我們交朋友。" },
+    { who:[11,14,4], label:'Group 3', text:"Our school helps us improve our English.", zh:"我們的學校幫助我們讓英文進步。" },
+    { who:[16,22,24], label:'Group 4', text:"Our school helps us discover our interests.", zh:"我們的學校幫助我們發掘自己的興趣。" },
   ]},
   { id:'5', title:'School tour', zh:'校園導覽', lines:[
-    { place:'Library', placeZh:'圖書館', who:[13], text:"This is our library.", zh:"這是我們的圖書館。" },
-    { who:[6], text:"We can read books here. It's quiet and beautiful!", zh:"我們可以在這裡看書。這裡安靜又漂亮！" },
-    { place:'Gym', placeZh:'體育館', who:[14], text:"This is our gym.", zh:"這是我們的體育館。" },
-    { who:[7], text:"We can play basketball here. It's big and fun!", zh:"我們可以在這裡打籃球。這裡又大又好玩！" },
-    { place:'Classroom', placeZh:'教室', who:[4], text:"This is our classroom.", zh:"這是我們的教室。" },
-    { who:[3], text:"We can learn English here. Our teachers are friendly!", zh:"我們可以在這裡學英文。我們的老師很友善！" },
-    { place:'Computer room', placeZh:'電腦教室', who:[5], text:"This is our computer room.", zh:"這是我們的電腦教室。" },
-    { who:[8], text:"We can use computers here. We can learn new things!", zh:"我們可以在這裡用電腦。我們可以學到新東西！" },
+    { place:'Library', placeZh:'圖書館', who:[25], text:"This is our library.", zh:"這是我們的圖書館。" },
+    { who:[9], text:"We can read books here. It's quiet and beautiful!", zh:"我們可以在這裡看書。這裡安靜又漂亮！" },
+    { place:'Activity center', placeZh:'活動中心', who:[27], text:"This is our activity center.", zh:"這是我們的活動中心。" },
+    { who:[5], text:"We can play basketball here. It's big and fun!", zh:"我們可以在這裡打籃球。這裡又大又好玩！" },
+    { place:'Classroom', placeZh:'教室', who:[10], text:"This is our classroom.", zh:"這是我們的教室。" },
+    { who:[4], text:"We can learn English here. Our teachers are friendly!", zh:"我們可以在這裡學英文。我們的老師很友善！" },
+    { place:'Computer room', placeZh:'電腦教室', who:[7], text:"This is our computer room.", zh:"這是我們的電腦教室。" },
+    { who:[11], text:"We can use computers here. We can learn new things!", zh:"我們可以在這裡用電腦。我們可以學到新東西！" },
     { place:'Martial arts room', placeZh:'武術教室', who:[1], text:"This is our martial arts room.", zh:"這是我們的武術教室。" },
-    { who:[2], text:"We can learn martial arts here. It's cool!", zh:"我們可以在這裡學武術。很酷！" },
-    { place:'Arts and crafts room', placeZh:'美勞教室', who:[9], text:"This is our arts and crafts room.", zh:"這是我們的美勞教室。" },
-    { who:[10], text:"We can paint and make things here. It's beautiful!", zh:"我們可以在這裡畫畫和做東西。這裡很漂亮！" },
-    { place:'Performance arts room', placeZh:'表演藝術教室', who:[11], text:"This is our performance arts room.", zh:"這是我們的表演藝術教室。" },
-    { who:[12], text:"We can sing and dance here. It's fun!", zh:"我們可以在這裡唱歌跳舞。很好玩！" },
+    { who:[3], text:"We can learn martial arts here. It's cool!", zh:"我們可以在這裡學武術。很酷！" },
+    { place:'Visual arts room', placeZh:'視覺藝術教室', who:[14], text:"This is our visual arts room.", zh:"這是我們的視覺藝術教室。" },
+    { who:[16], text:"We can paint and make things here. It's beautiful!", zh:"我們可以在這裡畫畫和做東西。這裡很漂亮！" },
+    { place:'Performance arts room', placeZh:'表演藝術教室', who:[22], text:"This is our performance arts room.", zh:"這是我們的表演藝術教室。" },
+    { who:[24], text:"We can sing and dance here. It's fun!", zh:"我們可以在這裡唱歌跳舞。很好玩！" },
   ]},
   { id:'5b', title:'My favorite place', zh:'我最喜歡的地方', lines:[
     { who:[1], text:"My favorite place is the {place}. It's {adj}.", zh:"我最喜歡的地方是 ____。它很 ____。" },
-    { who:[2], text:"My favorite place is the {place}. It's {adj}.", zh:"我最喜歡的地方是 ____。它很 ____。" },
+    { who:[3], text:"My favorite place is the {place}. It's {adj}.", zh:"我最喜歡的地方是 ____。它很 ____。" },
   ]},
   { id:'6', title:'Back to the gate', zh:'回到校門口', lines:[
-    { who:[5], text:"Our tour is almost finished.", zh:"我們的導覽快要結束了。" },
-    { who:[8], text:"We love our school. It's fun and friendly!", zh:"我們愛我們的學校。它有趣又友善！" },
-    { who:[10], text:"We hope you like it!", zh:"希望你們喜歡！" },
-    { who:[2], text:"Let's go back to the gate!", zh:"我們回校門口吧！" },
+    { who:[7], text:"Our tour is almost finished.", zh:"我們的導覽快要結束了。" },
+    { who:[11], text:"We love our school. It's fun and friendly!", zh:"我們愛我們的學校。它有趣又友善！" },
+    { who:[16], text:"We hope you like it!", zh:"希望你們喜歡！" },
+    { who:[3], text:"Let's go back to the gate!", zh:"我們回校門口吧！" },
   ]},
   { id:'7', title:'Goodbye', zh:'再見', lines:[
     { who:'ALL', text:"Come and visit our school! Thank you for watching! Goodbye!", zh:"歡迎來參觀我們的學校！謝謝收看！再見！" },
@@ -254,8 +261,8 @@ const SCENES = [
 
 // Choices for the fill-in blanks
 const PLACES = [
-  ['library','圖書館'],['gym','體育館'],['classroom','教室'],['computer room','電腦教室'],
-  ['martial arts room','武術教室'],['arts and crafts room','美勞教室'],['performance arts room','表演藝術教室']
+  ['library','圖書館'],['activity center','活動中心'],['classroom','教室'],['computer room','電腦教室'],
+  ['martial arts room','武術教室'],['visual arts room','視覺藝術教室'],['performance arts room','表演藝術教室']
 ];
 const ADJS = [['quiet','安靜'],['big','大'],['fun','好玩'],['cool','酷'],['beautiful','漂亮'],['friendly','友善']];
 const GRADES = ['7','8','9'];
@@ -269,6 +276,9 @@ const FREE_WORDS = ['guanmiao'];
 const TEST_MODE = !SCRIPT_URL;
 const LS = 'amb1_';
 const COLORS = 7;
+const NAMES = Object.fromEntries(STUDENTS.map(([n, nm]) => [n, nm]));
+const colorOf = n => 'c' + (Math.max(0, STUDENTS.findIndex(s => s[0] === n)) % COLORS);
+const label = n => (NAMES[n] || 'Student') + ' #' + n;
 
 // ---------- build line list ----------
 const LINES = [];
@@ -285,7 +295,7 @@ function myLines(num){ return LINES.filter(l => isMine(l, num)); }
 function whoLabel(ln){
   if (ln.who === 'ALL') return 'ALL';
   if (ln.who === 'EACH') return ln.label || 'Each student';
-  const nums = (ln.who || []).map(n => '#' + n).join(', ');
+  const nums = (ln.who || []).map(n => (NAMES[n] || '') + ' #' + n).join(', ');
   if (ln.label) return ln.label + (nums ? ' (' + nums + ')' : ' (to be decided)');
   return nums || '—';
 }
@@ -537,6 +547,7 @@ async function login(num, code){
   if (TEST_MODE) {
     const c = lsGet(cacheKey(num), {});
     Object.assign(S, { num, code, profile: c.profile || {}, progress: c.progress || {}, recordings: {}, localRec: S.num === num ? S.localRec : {}, pending: [] });
+    if (!S.profile.name && NAMES[num]) S.profile.name = NAMES[num];
     return;
   }
   const j = await api('login', { num, code });
@@ -547,6 +558,7 @@ async function login(num, code){
   pending.forEach(it => { if (!progress[it.lineId] || (progress[it.lineId].updated || 0) < it.updated) progress[it.lineId] = it; });
   const profile = j.profile || {};
   if (c.profile && !profile.name && c.profile.name) Object.assign(profile, c.profile);
+  if (!profile.name && NAMES[num]) profile.name = NAMES[num];
   Object.assign(S, { num, code, profile, progress, recordings: j.recordings || {}, localRec: S.num === num ? S.localRec : {}, pending });
   saveCache();
   flush();
@@ -857,13 +869,13 @@ function renderHome(){
   TTS.stop();
   app.innerHTML = '';
   const grid = h('div', { class: 'numgrid' });
-  for (let n = 1; n <= NUM_STUDENTS; n++) grid.append(h('button', { class: 'numbtn c' + ((n - 1) % COLORS), 'aria-label': 'Student ' + n, onclick: () => codeDialog(n) }, String(n)));
+  STUDENTS.forEach(([n, nm]) => grid.append(h('button', { class: 'numbtn ' + colorOf(n), 'aria-label': 'Student ' + n, onclick: () => codeDialog(n) }, h('span', { class: 'nnum' }, String(n)), h('span', { class: 'nname' }, nm))));
   app.append(
     h('div', { class: 'hero' }, h('div', { class: 'wrap' },
       h('h1', null, 'Guanmiao Ambassadors'),
       h('p', null, 'School Ambassador Video · Speaking Practice', h('br'), h('span', { class: 'zh' }, '學校大使影片 · 口說練習')))),
     h('div', { class: 'wrap' }, h('div', { class: 'homecard' },
-      h('h2', null, 'Tap your number ', h('span', { class: 'zh' }, '點選你的號碼')),
+      h('h2', null, 'Tap your number and name ', h('span', { class: 'zh' }, '點選你的座號和名字')),
       grid,
       testBanner(),
       h('div', { class: 'homelinks' },
@@ -893,7 +905,7 @@ function codeDialog(n){
   enter.onclick = submit;
   const ov = h('div', { class: 'overlay', onclick: e => { if (e.target === ov) close(); } },
     h('div', { class: 'dialog' },
-      h('h3', null, 'Student #' + n),
+      h('h3', null, label(n)),
       h('div', { class: 'zh' }, TEST_MODE ? 'Test mode: any code works. 測試模式：任何代碼都可以。' : 'Type your code. 請輸入你的代碼。'),
       input, err, enter,
       h('button', { class: 'btn', style: 'width:100%;justify-content:center;margin-top:8px', onclick: close }, 'Cancel 取消')));
@@ -918,7 +930,7 @@ function renderStudent(n){
       const passed = mine.filter(l => S.progress[l.id] && S.progress[l.id].passed).length;
       bar.innerHTML = '';
       bar.append(h('div', { class: 'wrap' },
-        h('div', { class: 'who' }, h('span', { class: 'badge' }, '#' + n), h('span', { class: 'nm' }, S.profile.name || 'Student ' + n)),
+        h('div', { class: 'who' }, h('span', { class: 'badge' }, '#' + n), h('span', { class: 'nm' }, S.profile.name || NAMES[n] || 'Student ' + n)),
         h('div', { class: 'spacer' }),
         h('div', null, h('div', { class: 'ptext' }, passed + ' / ' + mine.length + ' lines passed 通過'), h('div', { class: 'pbar' }, h('i', { style: 'width:' + Math.round(100 * passed / Math.max(1, mine.length)) + '%' }))),
         h('button', { class: 'tbtn', onclick: () => progressView(n) }, '📋 My progress 我的進度'),
@@ -985,7 +997,7 @@ function progressView(n){
   shot.append(h('div', { class: 'ph' },
     h('div', { class: 'badge' }, '#' + n),
     h('div', { style: 'flex:1' },
-      h('h3', null, (S.profile.name || 'Student ' + n), ' · My Ambassador Practice'),
+      h('h3', null, (S.profile.name || NAMES[n] || 'Student ' + n), ' · My Ambassador Practice'),
       h('div', { class: 'zh' }, '我的大使練習進度 · ' + new Date().toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })),
       h('div', { class: 'pbig' }, h('i', { style: 'width:' + Math.round(100 * passed / Math.max(1, mine.length)) + '%' })),
       h('div', { class: 'small' }, passed + ' of ' + mine.length + ' lines passed · 通過 ' + passed + ' / ' + mine.length))));
@@ -1100,7 +1112,7 @@ async function loadTeacher(code, body, bar, errEl){
   let data;
   if (TEST_MODE) {
     data = { students: [], progress: {}, recordings: {} };
-    for (let n = 1; n <= NUM_STUDENTS; n++) {
+    for (const [n] of STUDENTS) {
       const c = lsGet(cacheKey(n), {});
       data.students.push({ num: n, ...(c.profile || {}) });
       data.progress[n] = c.progress || {};
@@ -1118,7 +1130,7 @@ async function loadTeacher(code, body, bar, errEl){
   body.innerHTML = '';
   if (TEST_MODE) body.append(testBanner());
 
-  const students = data.students.slice().sort((a, b) => a.num - b.num);
+  const students = data.students.filter(st => NAMES[st.num]).sort((a, b) => a.num - b.num);
   const allLines = students.reduce((s, st) => s + myLines(st.num).length, 0);
   const allPassed = students.reduce((s, st) => s + myLines(st.num).filter(l => ((data.progress[st.num] || {})[l.id] || {}).passed).length, 0);
   body.append(h('div', { class: 'scenehead', style: 'margin-top:18px' },
@@ -1138,8 +1150,8 @@ async function loadTeacher(code, body, bar, errEl){
     const passed = ls.filter(l => (prog[l.id] || {}).passed).length;
     const lastAct = st.lastActive || Math.max(0, ...Object.values(prog).map(p => p.updated || 0));
     const row = h('div', { class: 'trow' },
-      h('div', { class: 'n c' + ((st.num - 1) % COLORS) }, st.num),
-      h('div', null, h('b', null, st.name || '—'), st.grade || st.cls ? h('div', { class: 'small' }, 'Grade ' + (st.grade || '?') + ' · Class ' + (st.cls || '?')) : null),
+      h('div', { class: 'n ' + colorOf(st.num) }, st.num),
+      h('div', null, h('b', null, st.name || NAMES[st.num]), st.grade || st.cls ? h('div', { class: 'small' }, 'Grade ' + (st.grade || '?') + ' · Class ' + (st.cls || '?')) : null),
       h('div', null, h('div', { class: 'small' }, passed + ' / ' + ls.length + ' passed'),
         h('div', { class: 'chips' }, ls.map(l => { const p = prog[l.id]; return h('i', { class: 'chip' + (p ? (p.passed ? ' passed' : ' tried') : ''), title: 'Scene ' + l.scene + ': ' + l.text }); }))),
       h('div', { class: 'hide-s' }, Object.keys(recs).length + ' / ' + ls.length),
@@ -1150,7 +1162,7 @@ async function loadTeacher(code, body, bar, errEl){
       detail = h('div', { class: 'tdetail' });
       ls.forEach(l => {
         const p = prog[l.id];
-        const words = lineWords(l, st, true);
+        const words = lineWords(l, { ...st, name: st.name || NAMES[st.num] }, true);
         const res = p && p.heard ? checkSpeech(words, p.heard) : null;
         const rec = recs[l.id];
         const audioHolder = h('div');
@@ -1186,7 +1198,7 @@ function route(){
   const hsh = location.hash || '#/';
   document.querySelectorAll('.overlay').forEach(o => o.remove());
   let m;
-  if ((m = hsh.match(/^#\/s\/(\d+)/))) { const n = +m[1]; if (n >= 1 && n <= NUM_STUDENTS) { if (S.num !== n) currentScene = null; renderStudent(n); return; } }
+  if ((m = hsh.match(/^#\/s\/(\d+)/))) { const n = +m[1]; if (NAMES[n]) { if (S.num !== n) currentScene = null; renderStudent(n); return; } }
   if (hsh.startsWith('#/teacher')) { renderTeacher(); return; }
   if (hsh.startsWith('#/practice')) { renderPractice(); return; }
   renderHome();
