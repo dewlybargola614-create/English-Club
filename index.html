@@ -155,7 +155,12 @@ button{cursor:pointer}
 
 /* ---------- teacher ---------- */
 .tcard{background:#fff;border-radius:var(--r);box-shadow:var(--shadow);margin:16px 0;overflow:hidden}
-.trow{display:grid;grid-template-columns:52px 1.3fr 1.6fr .8fr 1fr;gap:10px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line);cursor:pointer}
+.tbar{height:8px;background:#ece7dc;border-radius:99px;overflow:hidden;margin-top:4px;max-width:150px}
+.tbar>i{display:block;height:100%;border-radius:99px}
+.tnum{font-size:.9rem;color:var(--muted)}
+.tnum b{color:var(--ink);font-size:1.05rem}
+.tkey{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-size:.92rem;display:flex;flex-direction:column;gap:3px;margin-bottom:6px}
+.trow{display:grid;grid-template-columns:52px 1.2fr 1fr 1fr 1fr .9fr;gap:10px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line);cursor:pointer}
 .trow.head{background:#faf7f0;font-size:.8rem;font-weight:800;color:var(--muted);cursor:default}
 .trow .n{font-weight:900;color:#fff;border-radius:12px;height:40px;display:grid;place-items:center}
 .chips{display:flex;gap:4px;flex-wrap:wrap}
@@ -170,7 +175,7 @@ button{cursor:pointer}
 textarea.paste{width:100%;min-height:150px;border:1.5px solid var(--line);border-radius:14px;padding:12px;font-size:1.1rem;background:#fff;color:var(--ink)}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#1c2333;color:#fff;padding:10px 16px;border-radius:12px;z-index:80;font-size:.95rem;max-width:calc(100% - 32px);text-align:center}
 @media (max-width:640px){
-  .trow{grid-template-columns:44px 1fr 1fr;}
+  .trow{grid-template-columns:40px 1fr 1fr 1fr 1fr;gap:8px}
   .trow .hide-s{display:none}
   .words{font-size:1.25rem}
   .hero h1{font-size:1.6rem}
@@ -192,6 +197,9 @@ textarea.paste{width:100%;min-height:150px;border:1.5px solid var(--line);border
 .mi-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .mi-scene{font-size:.8rem;font-weight:700;color:var(--muted)}
 .mi-text{font-size:1.12rem;font-weight:650;line-height:1.35}
+.mi-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.mi-tag{font-size:.78rem;font-weight:700;border-radius:999px;padding:2px 9px;background:#efe9dc;color:#7a715e}
+.mi-tag.ok{background:var(--ok-bg);color:var(--ok)}
 .mi-go{flex:0 0 auto;font-size:1.8rem;color:#b9b1a0;line-height:1}
 .footnote{margin-top:22px;font-size:.8rem;color:var(--muted)}
 
@@ -1227,37 +1235,39 @@ function renderStudent(n, lineId){
   });
 }
 
-function lineStatus(ln){
-  const p = S.progress[ln.id];
-  if (!p) return { cls: '', label: '' };
-  return isPassed(p) ? { cls: 'done', label: '✓' } : { cls: 'tried', label: p.best + '%' };
+function lineDone(ln){
+  const said = isPassed(S.progress[ln.id]);
+  const rec = !!(S.recordings[ln.id] || (S.localRec[ln.id] && S.localRec[ln.id].state === 'sent'));
+  return { said, rec, both: said && rec, some: said || rec };
 }
 
 function renderMyLines(n){
   ttsStop();
   app.innerHTML = '';
   const mine = myLines(n);
-  const passed = mine.filter(l => isPassed(S.progress[l.id])).length;
-  const tried = mine.filter(l => S.progress[l.id] && !isPassed(S.progress[l.id])).length;
+  const st = mine.map(lineDone);
+  const done = st.filter(x => x.both).length, half = st.filter(x => x.some && !x.both).length;
   const list = h('div', { class: 'mylist' });
   mine.forEach((ln, i) => {
     const sc = SCENES.find(s => s.id === ln.scene);
-    const st = lineStatus(ln);
-    list.append(h('button', { class: 'myitem ' + st.cls, onclick: () => go('#/s/' + n + '/' + ln.id) },
-      h('span', { class: 'mi-status' }, st.label || String(i + 1)),
+    const d = st[i];
+    const tag = (ok, en, zh) => h('span', { class: 'mi-tag' + (ok ? ' ok' : '') }, (ok ? '✓ ' : '○ ') + en + ' ' + zh);
+    list.append(h('button', { class: 'myitem ' + (d.both ? 'done' : d.some ? 'tried' : ''), onclick: () => go('#/s/' + n + '/' + ln.id) },
+      h('span', { class: 'mi-status' }, d.both ? '✓' : String(i + 1)),
       h('span', { class: 'mi-body' },
         h('span', { class: 'mi-scene' }, 'Scene ' + sc.id + ' · ' + sc.title),
-        h('span', { class: 'mi-text' }, lineText(ln, S.profile, true))),
+        h('span', { class: 'mi-text' }, lineText(ln, S.profile, true)),
+        h('span', { class: 'mi-tags' }, tag(d.said, 'Said it', '說對了'), tag(d.rec, 'Recorded', '已錄音'))),
       h('span', { class: 'mi-go' }, '›')));
   });
   app.append(studentBar(n), h('div', { class: 'wrap page' },
     inAppBanner(), testBanner(),
     h('h1', { class: 'ptitle' }, 'My lines ', h('span', { class: 'zh' }, '我的台詞')),
-    h('div', { class: 'pmeta' }, passed + ' of ' + mine.length + ' passed · 通過 ' + passed + ' / ' + mine.length,
-      tried ? h('span', { style: 'color:#8a5a00' }, ' · ' + tried + ' practicing 練習中') : null),
+    h('div', { class: 'pmeta' }, done + ' of ' + mine.length + ' lines done · 完成 ' + done + ' / ' + mine.length),
     h('div', { class: 'pbar2' },
-      h('i', { style: 'width:' + Math.round(100 * passed / Math.max(1, mine.length)) + '%' }),
-      h('i', { style: 'background:#f2c35f;border-radius:0 99px 99px 0;width:' + Math.round(100 * tried / Math.max(1, mine.length)) + '%' })),
+      h('i', { style: 'width:' + Math.round(100 * done / Math.max(1, mine.length)) + '%' }),
+      h('i', { style: 'background:#f2c35f;width:' + Math.round(100 * half / Math.max(1, mine.length)) + '%' })),
+    h('div', { class: 'small', style: 'margin:-8px 0 14px' }, 'A line is done when you said it right (Say it) and recorded it. 說對了，也錄音了，就完成。'),
     list,
     h('div', { class: 'footnote' }, 'Voice: ' + (AUDIO_LINES.size ? 'natural recordings + ' : '') + TTS.name())));
 }
@@ -1326,7 +1336,7 @@ function sceneSheet(sc, n){
 // ---------- MY PROGRESS (screenshot) ----------
 function progressView(n){
   const mine = myLines(n);
-  const passed = mine.filter(l => isPassed(S.progress[l.id])).length;
+  const passed = mine.filter(l => lineDone(l).both).length;
   const shot = h('div', { class: 'pshot' });
   shot.append(h('div', { class: 'ph' },
     h('div', { class: 'badge' }, '#' + n),
@@ -1334,7 +1344,7 @@ function progressView(n){
       h('h3', null, (S.profile.name || NAMES[n] || 'Student ' + n), ' · My Ambassador Practice'),
       h('div', { class: 'zh' }, '我的大使練習進度 · ' + new Date().toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })),
       h('div', { class: 'pbig' }, h('i', { style: 'width:' + Math.round(100 * passed / Math.max(1, mine.length)) + '%' })),
-      h('div', { class: 'small' }, passed + ' of ' + mine.length + ' lines passed · 通過 ' + passed + ' / ' + mine.length))));
+      h('div', { class: 'small' }, passed + ' of ' + mine.length + ' lines done (said it + recorded) · 完成 ' + passed + ' / ' + mine.length))));
   SCENES.forEach(sc => {
     const ls = sc.lines.filter(l => isMine(l, n));
     if (!ls.length) return;
@@ -1508,30 +1518,35 @@ async function loadTeacher(code, body, bar, errEl){
   if (TEST_MODE) body.append(testBanner());
 
   const students = data.students.filter(st => NAMES[st.num]).sort((a, b) => a.num - b.num);
-  const allLines = students.reduce((s, st) => s + myLines(st.num).length, 0);
-  const allPassed = students.reduce((s, st) => s + myLines(st.num).filter(l => isPassed((data.progress[st.num] || {})[l.id])).length, 0);
+  // per student: how many of THEIR lines are passed with Try it, recorded, and both
+  const stats = st => {
+    const prog = data.progress[st.num] || {}, recs = (data.recordings || {})[st.num] || {}, ls = myLines(st.num);
+    const said = ls.filter(l => isPassed(prog[l.id])).length, rec = ls.filter(l => recs[l.id]).length;
+    const both = ls.filter(l => isPassed(prog[l.id]) && recs[l.id]).length;
+    return { prog, recs, ls, said, rec, both, n: ls.length };
+  };
+  const all = students.map(stats);
+  const sum = k => all.reduce((a, x) => a + x[k], 0);
+  const total = sum('n');
+  const tbar = (x, n, color) => h('div', { class: 'tbar' }, h('i', { style: 'background:' + color + ';width:' + Math.round(100 * x / Math.max(1, n)) + '%' }));
+  const cell = (x, n, color) => h('div', null, h('div', { class: 'tnum' }, h('b', null, String(x)), ' of ' + n), tbar(x, n, color));
   body.append(h('div', { class: 'scenehead', style: 'margin-top:18px' },
-    h('div', null, h('div', { class: 'kicker' }, 'Whole class'), h('h2', null, allPassed + ' / ' + allLines + ' lines passed')),
+    h('div', null, h('div', { class: 'kicker' }, 'Whole class'), h('h2', null, sum('both') + ' of ' + total + ' lines done')),
     h('div', { class: 'small' }, 'Updated ' + fmtDate(Date.now()) + '. Tap a student to see each line and play recordings.')));
-  body.append(h('div', { class: 'legend' },
-    h('span', null, h('i', { class: 'sw', style: 'background:var(--ok)' }), 'passed'),
-    h('span', null, h('i', { class: 'sw', style: 'background:#f2c35f' }), 'tried'),
-    h('span', null, h('i', { class: 'sw', style: 'background:#e6e1d6' }), 'not yet'),
-    h('span', null, '🎙 = recordings')));
+  body.append(h('div', { class: 'tkey' },
+    h('div', null, h('b', null, '🎤 Said it'), ' = the student used Try it and got 80% or more of the words right.'),
+    h('div', null, h('b', null, '⏺ Recorded'), ' = the student saved a recording of the line for you.'),
+    h('div', null, h('b', null, '✓ Done'), ' = both: said it right and recorded it.')));
   const table = h('div', { class: 'tcard' });
-  table.append(h('div', { class: 'trow head' }, h('div', null, '#'), h('div', null, 'Name'), h('div', null, 'Lines'), h('div', { class: 'hide-s' }, '🎙'), h('div', { class: 'hide-s' }, 'Last active')));
-  students.forEach(st => {
-    const prog = data.progress[st.num] || {};
-    const recs = (data.recordings || {})[st.num] || {};
-    const ls = myLines(st.num);
-    const passed = ls.filter(l => isPassed(prog[l.id])).length;
+  table.append(h('div', { class: 'trow head' }, h('div', null, '#'), h('div', null, 'Name'),
+    h('div', null, '🎤 Said it'), h('div', null, '⏺ Recorded'), h('div', null, '✓ Done'), h('div', { class: 'hide-s' }, 'Last active')));
+  students.forEach((st, si) => {
+    const { prog, recs, ls, said, rec, both, n } = all[si];
     const lastAct = st.lastActive || Math.max(0, ...Object.values(prog).map(p => p.updated || 0));
     const row = h('div', { class: 'trow' },
       h('div', { class: 'n ' + colorOf(st.num) }, st.num),
       h('div', null, h('b', null, st.name || NAMES[st.num]), st.grade || st.cls ? h('div', { class: 'small' }, 'Grade ' + (st.grade || '?') + ' · Class ' + (st.cls || '?')) : null),
-      h('div', null, h('div', { class: 'small' }, passed + ' / ' + ls.length + ' passed'),
-        h('div', { class: 'chips' }, ls.map(l => { const p = prog[l.id]; return h('i', { class: 'chip' + (p ? (isPassed(p) ? ' passed' : ' tried') : ''), title: 'Scene ' + l.scene + ': ' + l.text }); }))),
-      h('div', { class: 'hide-s' }, Object.keys(recs).length + ' / ' + ls.length),
+      cell(said, n, '#2d5ca6'), cell(rec, n, '#e0802a'), cell(both, n, 'var(--ok)'),
       h('div', { class: 'hide-s small' }, lastAct ? fmtDate(lastAct) : 'never'));
     let detail = null;
     row.onclick = () => {
@@ -1547,7 +1562,8 @@ async function loadTeacher(code, body, bar, errEl){
           h('div', { class: 'small' }, 'Scene ' + l.scene + ' · ' + whoLabel(l)),
           wordsEl(words, res),
           h('div', { class: 'meta' },
-            p ? (isPassed(p) ? '✓ Passed' : '✗ Not passed') + ' · best ' + p.best + '% · last ' + p.last + '% · ' + p.tries + (p.tries === 1 ? ' try · ' : ' tries · ') + fmtDate(p.updated) : 'Not practiced yet',
+            '🎤 Said it: ' + (p ? (isPassed(p) ? '✓ yes' : 'not yet') + ' (best ' + p.best + '%, ' + p.tries + (p.tries === 1 ? ' try' : ' tries') + ')' : 'not tried yet'),
+            '   ·   ⏺ Recorded: ' + (rec ? '✓ yes (' + fmtDate(rec.updated) + ')' : 'not yet'),
             p && p.heard ? h('div', null, 'Last heard: “' + p.heard + '”') : null),
           rec && !TEST_MODE ? h('div', { class: 'row', style: 'margin-top:6px' }, btn('▶', 'Play recording', fmtDate(rec.updated), 'small', async (e) => {
             const b = e.currentTarget; b.disabled = true;
