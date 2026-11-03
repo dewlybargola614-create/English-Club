@@ -1,5 +1,5 @@
 // keeps the page working with no internet
-const CACHE = 'sportsday-v4';
+const CACHE = 'sportsday-v5';
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html']))); self.skipWaiting(); });
 self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
 self.addEventListener('fetch', e => {
