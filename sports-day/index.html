@@ -41,6 +41,7 @@
   .seat.candy { background:var(--candy-bg); border-color:var(--candy); } .seat.candy b { color:var(--candy); }
   .seat.lollipop { background:var(--lolli-bg); border-color:var(--lolli); } .seat.lollipop b { color:var(--lolli); }
   .seat.pending { border-style:dashed; }
+  .seat.extra { border-style:dashed; color:var(--mute); }
   .sheet-bg { position:fixed; inset:0; background:rgba(10,20,40,.35); display:none; z-index:10; }
   .sheet { position:fixed; left:0; right:0; bottom:0; background:#fff; border-radius:18px 18px 0 0; padding:18px 16px calc(env(safe-area-inset-bottom) + 16px); z-index:11; transform:translateY(110%); transition:transform .18s ease; }
   .sheet.open { transform:none; } .sheet-bg.open { display:block; }
@@ -57,7 +58,8 @@
   .setup .pick button { flex:1; padding:16px; border-radius:12px; border:2px solid var(--line); background:#fff; font-size:18px; font-weight:800; color:var(--ink); }
   .setup .pick button.on { border-color:var(--navy); background:var(--navy); color:#fff; }
   .go { width:100%; padding:15px; border:0; border-radius:12px; background:var(--red); color:#fff; font-size:17px; font-weight:800; }
-  .toast { position:fixed; left:50%; bottom:calc(env(safe-area-inset-bottom) + 24px); max-width:92%; text-align:center; transform:translateX(-50%); background:var(--ink); color:#fff; padding:10px 16px; border-radius:20px; font-size:14px; display:none; z-index:20; }
+  .toast { align-items:center; gap:12px; width:92%; position:fixed; left:50%; bottom:calc(env(safe-area-inset-bottom) + 24px); text-align:left; font-weight:600; transform:translateX(-50%); background:var(--ink); color:#fff; padding:10px 12px 10px 16px; border-radius:14px; font-size:15px; display:none; z-index:20; }
+.toast button { margin-left:auto; flex:none; border:0; border-radius:10px; background:#FFC53D; color:#1B2433; font-weight:800; font-size:15px; padding:10px 14px; }
 </style>
 </head>
 <body>
@@ -142,7 +144,7 @@ function render() {
   const nC = vals.filter(e => e.p === 'candy').length, nL = vals.filter(e => e.p === 'lollipop').length;
   const classes = Object.keys(SEATS).filter(c => c[0] === String(grade - 6));
   if (!classes.includes(cls)) cls = classes[0];
-  const doneIn = c => SEATS[c].filter(n => s[key(c, n)]).length;
+  const doneIn = c => seatsOf(c, s).filter(n => s[key(c, n)]).length;
   $('#app').innerHTML = `
   <header>
     <div class="top"><h1>Sports Day · English Station</h1>
@@ -158,11 +160,11 @@ function render() {
   <div class="classes">${classes.map(c => `<button class="cls ${c === cls ? 'on' : ''}" data-c="${c}">${c.slice(2)}<small>${doneIn(c)}/${SEATS[c].length}</small></button>`).join('')}</div>
   <div class="find"><h2>Class ${cls}</h2>
     <div class="legend"><span><i style="background:var(--candy)"></i>candy</span><span><i style="background:var(--lolli)"></i>lollipop</span></div></div>
-  <div class="hint">Tap = 🍬 candy · Tap again = 🍭 lollipop · Hold = details / undo</div>
-  <div class="grid">${SEATS[cls].map(n => {
+  <div class="hint">Tap = 🍬 candy · Tap again = 🍭 lollipop · Wrong seat? Press UNDO</div>
+  <div class="grid">${seatsOf(cls, s).map(n => {
       const e = s[key(cls, n)], nm = names[key(cls, n)];
-      return `<button class="seat ${e ? e.p : ''} ${e && e.pend ? 'pending' : ''}" data-n="${n}"><b>${n}</b><span>${nm ? (nm[1] || nm[0]) : '&nbsp;'}</span></button>`;
-    }).join('')}</div>`;
+      return `<button class="seat ${e ? e.p : ''} ${e && e.pend ? 'pending' : ''}" data-n="${n}"><b>${n < 100 ? n : '+' + (n - 100)}</b><span>${nm ? (nm[1] || nm[0]) : n < 100 ? '&nbsp;' : 'not on list'}</span></button>`;
+    }).join('')}<button class="seat extra" id="extra"><b>＋</b><span>not on list</span></button></div>`;
   renderStatus();
   document.querySelectorAll('.tab').forEach(b => b.onclick = () => { grade = b.dataset.g; LS.set('grade', grade); cls = ''; render(); window.scrollTo(0, 0); });
   document.querySelectorAll('.cls').forEach(b => b.onclick = () => { cls = b.dataset.c; LS.set('cls', cls); render(); });
@@ -174,21 +176,31 @@ function render() {
     b.addEventListener('contextmenu', e => e.preventDefault());
     b.onclick = () => { if (held) { held = false; return; } tapSeat(cls, n); };
   });
+  $('#extra').onclick = () => { const used = seatsOf(cls, state()).filter(n => n >= 100); const n = 101 + used.length; tapSeat(cls, n); };
   $('#who').onclick = () => { station = ''; render(); };
 }
 
+function seatsOf(c, s) {   // class list + any extra (not-on-list) students already ticked
+  const ex = new Set(); for (const e of log.concat(pending)) if (e.c === c && e.n >= 100) ex.add(e.n);
+  return SEATS[c].concat([...ex].sort((a, b) => a - b));
+}
 function tapSeat(c, n) {   // tap: nothing -> candy -> lollipop -> candy ...
   const e = state()[key(c, n)], nm = names[key(c, n)];
+  const who = (nm ? nm[1] || nm[0] : label(n)) + ` (${c} No.${n < 100 ? n : '–'})`;
+  if (e && e.st !== station) {   // got a prize at the other station: don't change it with a tap
+    toast(`⚠ ${who} already got ${e.p === 'candy' ? '🍬 candy' : '🍭 lollipop'} at ${e.st}'s station. Nothing changed.`, 4000);
+    return;
+  }
   const p = e && e.p === 'candy' ? 'lollipop' : 'candy';
-  const who = nm ? nm[1] || nm[0] : 'No. ' + n;
-  if (e && e.st !== station) toast(`⚠ ${who} already got ${e.p === 'candy' ? '🍬' : '🍭'} at ${e.st}'s station`, 3500);
-  else toast(`${who} → ${p === 'candy' ? '🍬 candy' : '🍭 lollipop'}`);
+  const before = e ? e.p : 'undo';
   record(c, n, p);
+  toast(`${who} → ${p === 'candy' ? '🍬 candy' : '🍭 lollipop'}`, 5000, () => record(c, n, before));
 }
+const label = n => n < 100 ? 'No. ' + n : 'Extra ' + (n - 100);
 
 function openSheet(c, n) {
   const e = state()[key(c, n)], nm = names[key(c, n)];
-  const title = `<div class="who">Class ${c} · No. ${n}</div><div class="name">${nm ? nm[0] + (nm[1] ? ' <span style="font-size:18px;color:var(--mute)">' + nm[1] + '</span>' : '') : 'No. ' + n}</div>`;
+  const title = `<div class="who">Class ${c} · ${label(n)}</div><div class="name">${nm ? nm[0] + (nm[1] ? ' <span style="font-size:18px;color:var(--mute)">' + nm[1] + '</span>' : '') : label(n)}</div>`;
   let body;
   if (!e) body = `<div class="btns"><button class="big c" data-p="candy">🍬 Candy</button><button class="big l" data-p="lollipop">🍭 Lollipop</button></div>
                   <button class="small" id="cancel">Cancel</button>`;
@@ -225,7 +237,12 @@ function renderSetup() {
   };
 }
 
-let toastT; function toast(t, ms) { const el = $('#toast'); el.textContent = t; el.style.display = 'block'; clearTimeout(toastT); toastT = setTimeout(() => el.style.display = 'none', ms || 1600); }
+let toastT;
+function toast(t, ms, undo) {
+  const el = $('#toast'); el.innerHTML = ''; const s = document.createElement('span'); s.textContent = t; el.appendChild(s);
+  if (undo) { const b = document.createElement('button'); b.textContent = 'UNDO'; b.onclick = () => { undo(); el.style.display = 'none'; }; el.appendChild(b); }
+  el.style.display = 'flex'; clearTimeout(toastT); toastT = setTimeout(() => el.style.display = 'none', ms || 1800);
+}
 
 window.addEventListener('online', () => sync());
 window.addEventListener('offline', renderStatus);
