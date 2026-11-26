@@ -169,9 +169,9 @@ function spin(){
   // final angle so that the middle of segment `pick` (plus a little random offset) is under the pointer
   const offset = (Math.random()-.5)*seg*0.7;
   const target = -(pick*seg + seg/2 + offset);
-  const start = angle, turns = 6 + Math.floor(Math.random()*3);
+  const start = angle, turns = 4 + Math.floor(Math.random()*2);
   let end = target; while (end > start - turns*Math.PI*2) end -= Math.PI*2;
-  const dur = 4800 + Math.random()*1200, t0 = performance.now();
+  const dur = 2500 + Math.random()*500, t0 = performance.now();
   let lastSeg = null;
   function frame(t){
     const p = Math.min(1,(t-t0)/dur), ease = 1-Math.pow(1-p,4);
