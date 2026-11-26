@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spin the Wheel</title>
+<style>
+  :root { --ink:#3B2A20; --grey:#767676; --grat:#7B4FA0; --red:#A33528; --bg:#F4ECDD; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--ink);
+    font-family:"Comic Sans MS","Microsoft JhengHei","PingFang TC",sans-serif; overflow:hidden; }
+  body { background:
+      radial-gradient(circle at 15% 20%, rgba(255,255,255,.55), transparent 40%),
+      radial-gradient(circle at 85% 80%, rgba(214,190,150,.35), transparent 45%), var(--bg); }
+  .wrap { display:flex; height:100vh; padding:2vh 2.5vw; gap:2.5vw; align-items:center; }
+  .left { flex:0 0 auto; position:relative; height:94vh; aspect-ratio:1; }
+  canvas { width:100%; height:100%; display:block; }
+  .pointer { position:absolute; top:-1.2vh; left:50%; transform:translateX(-50%); width:0; height:0;
+    border-left:2.6vh solid transparent; border-right:2.6vh solid transparent; border-top:5vh solid var(--ink);
+    filter:drop-shadow(0 .4vh .3vh rgba(0,0,0,.3)); z-index:2; }
+  #spin { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:19%; aspect-ratio:1; border-radius:50%;
+    border:.8vh solid #fff; background:var(--grat); color:#fff; font:inherit; font-weight:700; font-size:3.4vh; cursor:pointer;
+    box-shadow:0 .6vh 1.4vh rgba(0,0,0,.25); }
+  #spin:disabled { opacity:.75; cursor:default; }
+  .right { flex:1; display:flex; flex-direction:column; gap:2.4vh; min-width:0; height:94vh; }
+  .card { background:#fff; border-radius:2vh; padding:2.2vh 2.4vw; box-shadow:0 .5vh 1.5vh rgba(80,50,20,.12); }
+  h1 { margin:0; font-size:6.5vh; line-height:1.1; }
+  .sub { color:var(--grey); font-size:2.6vh; margin-top:.4vh; }
+  .pattern { font-size:3.6vh; line-height:1.5; }
+  .pattern .zh { color:var(--red); font-weight:700; }
+  .pattern .en { color:var(--grat); font-weight:700; font-style:italic; }
+  .pattern .hint { color:var(--grey); font-size:2.4vh; display:block; }
+  .picked { flex:1; overflow:auto; }
+  .picked h2 { margin:0 0 1vh; font-size:3vh; }
+  .chips { display:flex; flex-wrap:wrap; gap:1vh; }
+  .chip { font-size:2.8vh; padding:.6vh 1.4vh; border-radius:3vh; color:#fff; font-weight:700; }
+  .tools { display:flex; gap:1vw; flex-wrap:wrap; }
+  .tools button, .tools label { font:inherit; font-size:2.2vh; border:0; border-radius:1.2vh; padding:1vh 1.4vw; background:#fff;
+    color:var(--ink); cursor:pointer; box-shadow:0 .3vh .8vh rgba(80,50,20,.12); display:flex; align-items:center; gap:.6vw; }
+  .left-count { color:var(--grey); font-size:2.4vh; }
+  /* result pop-up */
+  .shade { position:fixed; inset:0; background:rgba(40,25,15,.45); display:none; align-items:center; justify-content:center; z-index:9; }
+  .shade.on { display:flex; }
+  .pop { background:#fff; border-radius:3vh; padding:4vh 5vw; text-align:center; min-width:46vw; box-shadow:0 2vh 5vh rgba(0,0,0,.3);
+    animation:pop .35s ease-out; }
+  @keyframes pop { from { transform:scale(.6); opacity:0 } to { transform:scale(1); opacity:1 } }
+  .pop .no { font-size:5vh; color:var(--grey); font-weight:700; }
+  .pop .nm { font-size:14vh; font-weight:700; line-height:1.15; margin:.5vh 0 2vh; }
+  .pop .btns { display:flex; gap:1.5vw; justify-content:center; }
+  .pop button { font:inherit; font-size:3vh; font-weight:700; border:0; border-radius:1.6vh; padding:1.6vh 2.6vw; cursor:pointer; }
+  .b1 { background:var(--grat); color:#fff; } .b2 { background:#EFE6D6; color:var(--ink); }
+  .setup { position:fixed; inset:0; background:var(--bg); display:none; align-items:center; justify-content:center; z-index:10; }
+  .setup.on { display:flex; }
+  .setup .card { width:60vw; }
+  .setup textarea { width:100%; height:40vh; font:inherit; font-size:2.6vh; padding:1vh; border-radius:1vh; border:1px solid #d8cbb5; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="left">
+    <div class="pointer"></div>
+    <canvas id="wheel" width="1400" height="1400"></canvas>
+    <button id="spin">SPIN</button>
+  </div>
+  <div class="right">
+    <div class="card">
+      <h1>Who's next?</h1>
+      <div class="sub"><span id="cls"></span><span id="count"></span></div>
+    </div>
+    <div class="card pattern">
+      <span class="zh">中文</span> → <span class="en">"I'm so grateful!"</span>
+      <span class="hint">先用中文說，再說英文。</span>
+    </div>
+    <div class="card picked">
+      <h2>Picked</h2>
+      <div class="chips" id="chips"></div>
+    </div>
+    <div class="tools">
+      <label><input type="checkbox" id="remove" checked> Remove after picking</label>
+      <button id="undo">↩ Put last one back</button>
+      <button id="reset">⟳ Start over</button>
+      <button id="edit">✎ Edit names</button>
+    </div>
+  </div>
+</div>
+
+<div class="shade" id="shade">
+  <div class="pop">
+    <div class="no" id="pNo"></div>
+    <div class="nm" id="pNm"></div>
+    <div class="btns"><button class="b1" id="ok">OK</button><button class="b2" id="again">Spin again</button></div>
+  </div>
+</div>
+
+<div class="setup" id="setup">
+  <div class="card">
+    <h1 style="font-size:4vh">Names (one per line: number, space, name)</h1>
+    <textarea id="names"></textarea>
+    <div class="tools" style="margin-top:2vh"><button id="save">Save</button><button id="cancel">Cancel</button></div>
+  </div>
+</div>
+
+<script>
+// Names are NOT stored in this public file. They come from the link (#c=class&n=list), which only the teacher has,
+// and are then remembered on this computer.
+const H = new URLSearchParams(location.hash.slice(1));
+const CLS = H.get('c') || localStorage.getItem('wheel_lastClass') || '';
+try { if (CLS) localStorage.setItem('wheel_lastClass', CLS); } catch(e) {}
+const DEFAULT = (H.get('n') || '').split('|').join('\n');
+if (location.hash) history.replaceState(null, '', location.pathname);
+const COLORS = ['#C05A1E','#4E7A2E','#7B4FA0','#2D6A9F','#A33528','#B8862B','#2F6F73','#8A5A3C'];
+const store = { get(k,d){ try{ const v=localStorage.getItem('wheel_'+CLS+'_'+k); return v===null?d:JSON.parse(v);}catch(e){return d;} },
+                set(k,v){ try{ localStorage.setItem('wheel_'+CLS+'_'+k, JSON.stringify(v)); }catch(e){} } };
+
+let all = parse(DEFAULT || store.get('names', ''));
+if (DEFAULT) store.set('names', DEFAULT);
+let picked = store.get('picked', []);           // list of entries in pick order
+let angle = 0, spinning = false, audio;
+const cv = document.getElementById('wheel'), ctx = cv.getContext('2d');
+const $ = id => document.getElementById(id);
+
+function parse(txt){ return txt.split('\n').map(s=>s.trim()).filter(Boolean).map(s=>{ const m=s.match(/^(\d+)[\s.、:]*(.*)$/); return m?{n:+m[1],name:m[2].trim()}:{n:'',name:s}; }); }
+const key = e => e.n+' '+e.name;
+const colorOf = e => COLORS[all.findIndex(x=>key(x)===key(e)) % COLORS.length];
+function remaining(){ const p=new Set(picked.map(key)); return $('remove').checked ? all.filter(e=>!p.has(key(e))) : all.slice(); }
+
+function draw(){
+  const list = remaining(), N = list.length, W = cv.width, R = W/2 - 14;
+  ctx.clearRect(0,0,W,W);
+  ctx.save(); ctx.translate(W/2,W/2);
+  ctx.beginPath(); ctx.arc(0,0,R+10,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill();
+  if (!N){ ctx.fillStyle='#3B2A20'; ctx.font='bold 70px "Comic Sans MS"'; ctx.textAlign='center'; ctx.fillText('Everyone had a turn!',0,-260); ctx.restore(); return; }
+  ctx.rotate(angle);
+  const seg = Math.PI*2/N;
+  const fs = Math.max(30, Math.min(62, 1400/N));
+  list.forEach((e,i)=>{
+    const a0 = -Math.PI/2 + i*seg;
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,R,a0,a0+seg); ctx.closePath();
+    ctx.fillStyle = colorOf(e); ctx.fill();
+    ctx.strokeStyle='#fff'; ctx.lineWidth=4; ctx.stroke();
+    const mid = a0+seg/2, abs = ((mid+angle)%(Math.PI*2)+Math.PI*2)%(Math.PI*2);
+    const flip = abs > Math.PI/2 && abs < Math.PI*1.5;   // left half: turn text so it isn't upside down
+    ctx.save(); ctx.rotate(mid); ctx.textBaseline='middle'; ctx.fillStyle='#fff';
+    ctx.font = `bold ${fs}px "Comic Sans MS","Microsoft JhengHei",sans-serif`;
+    if (flip){ ctx.rotate(Math.PI); ctx.textAlign='left'; ctx.fillText(e.n+'  '+e.name, -(R-34), 0); }
+    else { ctx.textAlign='right'; ctx.fillText(e.n+'  '+e.name, R-34, 0); }
+    ctx.restore();
+  });
+  ctx.restore();
+  $('count').textContent = list.length + ' left';
+  $('spin').disabled = spinning || !N;
+}
+
+function chips(){
+  $('chips').innerHTML = picked.map(e=>`<span class="chip" style="background:${colorOf(e)}">${e.n} ${e.name}</span>`).join('');
+}
+
+function tick(){ try{ audio = audio || new (window.AudioContext||window.webkitAudioContext)();
+  const o=audio.createOscillator(), g=audio.createGain(); o.frequency.value=900; g.gain.setValueAtTime(.08,audio.currentTime);
+  g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+.05); o.connect(g).connect(audio.destination); o.start(); o.stop(audio.currentTime+.05);}catch(e){} }
+
+function spin(){
+  const list = remaining(); if (spinning || !list.length) return;
+  spinning = true; draw();
+  const N = list.length, seg = Math.PI*2/N;
+  const pick = Math.floor(Math.random()*N);
+  // final angle so that the middle of segment `pick` (plus a little random offset) is under the pointer
+  const offset = (Math.random()-.5)*seg*0.7;
+  const target = -(pick*seg + seg/2 + offset);
+  const start = angle, turns = 6 + Math.floor(Math.random()*3);
+  let end = target; while (end > start - turns*Math.PI*2) end -= Math.PI*2;
+  const dur = 4800 + Math.random()*1200, t0 = performance.now();
+  let lastSeg = null;
+  function frame(t){
+    const p = Math.min(1,(t-t0)/dur), ease = 1-Math.pow(1-p,4);
+    angle = start + (end-start)*ease;
+    const s = Math.floor((((-angle) % (Math.PI*2)) + Math.PI*2) % (Math.PI*2) / seg);
+    if (s !== lastSeg){ lastSeg = s; tick(); }
+    draw();
+    if (p < 1) requestAnimationFrame(frame); else { spinning=false; done(list[pick]); }
+  }
+  requestAnimationFrame(frame);
+}
+
+let current = null;
+function done(e){
+  current = e;
+  $('pNo').textContent = 'No. ' + e.n; $('pNm').textContent = e.name;
+  $('pNm').style.color = colorOf(e);
+  $('shade').classList.add('on');
+}
+function accept(){
+  if (current){ picked.push(current); store.set('picked',picked); current=null; }
+  $('shade').classList.remove('on'); angle = 0; chips(); draw();
+}
+
+$('spin').onclick = spin;
+$('ok').onclick = accept;
+$('again').onclick = () => { accept(); setTimeout(spin, 250); };
+$('remove').onchange = () => { store.set('remove',$('remove').checked); angle=0; draw(); };
+$('undo').onclick = () => { picked.pop(); store.set('picked',picked); angle=0; chips(); draw(); };
+$('reset').onclick = () => { if (confirmBox()) { picked=[]; store.set('picked',picked); angle=0; chips(); draw(); } };
+function confirmBox(){ return picked.length===0 || window.confirm('Start over? The picked list will be cleared.'); }
+$('edit').onclick = () => { $('names').value = all.map(e=>e.n+' '+e.name).join('\n'); $('setup').classList.add('on'); };
+$('cancel').onclick = () => $('setup').classList.remove('on');
+$('save').onclick = () => { const t=$('names').value; store.set('names',t); all=parse(t); picked=[]; store.set('picked',picked);
+  $('setup').classList.remove('on'); angle=0; chips(); draw(); };
+document.addEventListener('keydown', e => {
+  if ($('setup').classList.contains('on')) return;
+  if (e.key===' ' || e.key==='Enter'){ e.preventDefault(); if ($('shade').classList.contains('on')) accept(); else spin(); }
+});
+$('remove').checked = store.get('remove', true);
+$('cls').textContent = CLS ? 'Class ' + CLS + ' · ' : '';
+if (!all.length) $('edit').click();
+chips(); draw();
+</script>
+</body>
+</html>
